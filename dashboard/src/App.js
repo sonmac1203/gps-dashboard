@@ -1,4 +1,4 @@
-import { Dashboard } from '../components';
+import { Dashboard } from './components';
 function App() {
   return (
     <div className='App'>
