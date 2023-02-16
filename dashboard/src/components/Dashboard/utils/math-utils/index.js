@@ -1,0 +1,1 @@
+export { getDistanceFromCoords } from './getDistanceFromCoords';

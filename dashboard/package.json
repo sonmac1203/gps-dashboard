@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "css-loader": "^6.7.3",
+    "jest": "^27.5.1",
     "style-loader": "^3.3.1"
   }
 }

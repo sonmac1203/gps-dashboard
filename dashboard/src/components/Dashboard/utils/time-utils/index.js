@@ -1,0 +1,1 @@
+export { getMoment } from './getMoment';
