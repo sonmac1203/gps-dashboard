@@ -12,6 +12,8 @@ export const Dashboard = () => {
   const [clickedClientId, setClickedClientId] = useState();
   const [secondaryTableData, setSecondaryTableData] = useState();
 
+  const [clientDistances, setClientDistances] = useState({});
+
   // Define the MQTT broker's URL and port
   const brokerUrl = 'ws://192.168.0.107:8000';
 
@@ -33,6 +35,34 @@ export const Dashboard = () => {
       setSecondaryTableData(clientData.messageQueue.slice(1, MAX_QUEUE_LENGTH));
     }
   }, [clientsConnected, clickedClientId]);
+
+  useEffect(() => {
+    if (!clickedClientId || !clientsConnected[clickedClientId]) {
+      setClientDistances({});
+      return;
+    }
+
+    const [selectedClientLat, selectedClientLong] = getMostRecentCoords(
+      clientsConnected[clickedClientId].messageQueue[0]
+    );
+    const distances = {};
+    Object.keys(clientsConnected).forEach((clientId) => {
+      if (clientId !== clickedClientId) {
+        const message = clientsConnected[clientId].messageQueue[0];
+        const [clientLat, clientLong] = getMostRecentCoords(message);
+        const distance = message
+          ? calculateDistance(
+              selectedClientLat,
+              selectedClientLong,
+              clientLat,
+              clientLong
+            )
+          : '---';
+        distances[clientId] = distance;
+      }
+    });
+    setClientDistances(distances);
+  }, [clickedClientId, clientsConnected]);
 
   useEffect(() => {
     const client = mqtt.connect(brokerUrl, options);
@@ -92,10 +122,10 @@ export const Dashboard = () => {
     <Container className='mt-5'>
       <h1 className='mb-5'>GPS Dashboard</h1>
       <Row>
-        <Col lg='8' md='12'>
-          <section>
-            <div className='d-flex align-items-center mb-4 gap-3'>
-              <h2>Connected clients</h2>
+        <Col lg='8' md='12' className='d-flex flex-column align-self-stretch'>
+          <section className={styles.Section + ' ' + styles.Primary}>
+            <div className='d-flex align-items-center mb-3 gap-3'>
+              <h3>Connected clients</h3>
               <Badge color={brokerConnected ? 'danger' : 'secondary'}>
                 {brokerConnected ? 'Live' : 'Disconnected'}
               </Badge>
@@ -103,7 +133,7 @@ export const Dashboard = () => {
             {Object.keys(clientsConnected).length === 0 ? (
               <h5>No client has been connected</h5>
             ) : (
-              <Table>
+              <Table hover responsive>
                 <thead>
                   <tr>
                     <th>#</th>
@@ -153,16 +183,18 @@ export const Dashboard = () => {
             )}
           </section>
         </Col>
-        <Col lg='4' md='12'>
-          <section>
-            <h2 className='mb-4'> Details</h2>
-            {!clickedClientId ? (
-              <h5>Click on a client to see details</h5>
-            ) : (
-              <>
-                <div>
-                  <h3 className='mt-4'>Recent records</h3>
-                  <Table>
+        <Col lg='4' md='12' className='d-flex flex-column'>
+          {clickedClientId && (
+            <>
+              <section className={'mb-4 ' + styles.Section}>
+                <div className='d-flex align-items-center mb-3 gap-3'>
+                  <h3>Other records</h3>
+                  <Badge color={brokerConnected ? 'danger' : 'secondary'}>
+                    {brokerConnected ? 'Live' : 'Disconnected'}
+                  </Badge>
+                </div>
+                {secondaryTableData && secondaryTableData.length > 0 ? (
+                  <Table responsive>
                     <thead>
                       <tr>
                         <th>Time</th>
@@ -172,52 +204,56 @@ export const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {secondaryTableData &&
-                        secondaryTableData.map((data, id) => {
-                          const message = data;
-                          const [lat, long] = getMostRecentCoords(message);
-                          const { date, time } = getMomentDateAndTime();
+                      {secondaryTableData.map((data, id) => {
+                        const message = data;
+                        const [lat, long] = getMostRecentCoords(message);
+                        const { date, time } = getMomentDateAndTime();
 
-                          return (
-                            <tr key={id}>
-                              <th scope='row'>{time}</th>
-                              <td>{date}</td>
-                              <td>{lat}</td>
-                              <td>{long}</td>
-                            </tr>
-                          );
-                        })}
+                        return (
+                          <tr key={id}>
+                            <td>{time}</td>
+                            <td>{date}</td>
+                            <td>{lat}</td>
+                            <td>{long}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </Table>
-                </div>
-                <div>
+                ) : (
+                  <h5>No other record</h5>
+                )}
+              </section>
+              <section className={styles.Section}>
+                <div className='d-flex align-items-center mb-3 gap-3'>
                   <h3>Distances</h3>
-                  <Table>
+                  <Badge color={brokerConnected ? 'danger' : 'secondary'}>
+                    {brokerConnected ? 'Live' : 'Disconnected'}
+                  </Badge>
+                </div>
+                {Object.keys(clientDistances).length === 0 ? (
+                  <h5>No other client connected</h5>
+                ) : (
+                  <Table responsive>
                     <thead>
                       <tr>
                         <th>To #</th>
-                        <th>Distance</th>
+                        <th>Distance (km)</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <th scope='row'>1</th>
-                        <td>Mark</td>
-                      </tr>
-                      <tr>
-                        <th scope='row'>2</th>
-                        <td>Jacob</td>
-                      </tr>
-                      <tr>
-                        <th scope='row'>3</th>
-                        <td>Larry</td>
-                      </tr>
+                      {Object.keys(clientDistances).map((clientId, key) => (
+                        <tr key={key}>
+                          <td>{clientId}</td>
+                          <td>{clientDistances[clientId]}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </Table>
-                </div>
-              </>
-            )}
-          </section>
+                )}
+              </section>
+            </>
+          )}
         </Col>
       </Row>
     </Container>
@@ -227,8 +263,6 @@ export const Dashboard = () => {
 const getMostRecentCoords = (message) => {
   return message ? message.split(',') : ['--.--', '--.--'];
 };
-
-const getFormattedDate = (timestamp) => {};
 
 const getMomentDateAndTime = () => {
   const timestamp = new Date();
@@ -243,3 +277,23 @@ const getMomentDateAndTime = () => {
   });
   return { date, time };
 };
+
+// Define a function to calculate the great-circle distance between two points
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d.toFixed(10);
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
