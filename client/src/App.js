@@ -9,11 +9,8 @@ import {
   Label,
   Input,
   Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
 } from 'reactstrap';
+import { ClientCard } from './components';
 import styles from './App.module.css';
 
 function App() {
@@ -59,15 +56,16 @@ function App() {
     });
   };
 
-  const handleAuto = (clientId) => {
+  const onAutoPublish = (clientId) => {
     let currentIndex = 0;
-
+    window.alert('Auto publishing started.');
     const intervalId = setInterval(() => {
       if (currentIndex < autoMessages.length) {
         const message = autoMessages[currentIndex];
         clients[clientId].clientHandle.publish(`gps/${clientId}`, message);
         currentIndex += 1;
       } else {
+        window.alert('Auto publishing completed.');
         clearInterval(intervalId);
       }
     }, FREQUENCY);
@@ -77,6 +75,7 @@ function App() {
   const onManualPublish = (e, clientId) => {
     e.preventDefault();
     const message = e.target[0].value;
+    e.target[0].value = '';
     if (!message || message.length === 0) {
       return false;
     }
@@ -127,40 +126,12 @@ function App() {
           {Object.keys(clients).length > 0 &&
             Object.keys(clients).map((clientId, k) => (
               <Col md='6' sm='12' key={k}>
-                <Card className='my-2'>
-                  <CardHeader>{clients[clientId].name}</CardHeader>
-                  <CardBody>
-                    <CardTitle tag='h5' className='mb-4'>
-                      Id: {clientId}
-                    </CardTitle>
-                    <Form
-                      onSubmit={(e) => {
-                        onManualPublish(e, clientId);
-                      }}
-                    >
-                      <FormGroup>
-                        <Input
-                          id='message'
-                          name='message'
-                          placeholder='Provide your coordinates ...'
-                          type='text'
-                        />
-                      </FormGroup>
-                      <Button type='submit' className='mt-2' color='primary'>
-                        Send coordinates
-                      </Button>
-                      <Button
-                        className='mt-2 ms-3'
-                        color='link'
-                        onClick={() => {
-                          handleAuto(clientId);
-                        }}
-                      >
-                        Auto-generated
-                      </Button>
-                    </Form>
-                  </CardBody>
-                </Card>
+                <ClientCard
+                  clientName={clients[clientId].name}
+                  clientId={clientId}
+                  onManualPublish={onManualPublish}
+                  onAutoPublish={onAutoPublish}
+                />
               </Col>
             ))}
         </Row>
