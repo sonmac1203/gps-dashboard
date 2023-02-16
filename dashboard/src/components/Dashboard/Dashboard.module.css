@@ -1,0 +1,7 @@
+.PrimaryTableRow:hover {
+  background-color: #dee2e6;
+}
+
+.PrimaryTableRow {
+  cursor: pointer;
+}
